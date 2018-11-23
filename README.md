@@ -1,8 +1,8 @@
 Code and data to support Featured Graphic submission: Characterising labour market self-containment in London with geographically arranged small multiples
 ==========================================================================================================================================================
 
--   [Roger Beecham](http://www.roger-beecham.com) | \[@rjbeecham\](<https://twitter.com/rJBeecham>)
--   [Aidan Slingsby](http://www.staff.city.ac.uk/~sbbb717/) | \[@aidanslingsby\](<https://twitter.com/aidanslingsby>)
+-   [Roger Beecham](http://www.roger-beecham.com)
+-   [Aidan Slingsby](http://www.staff.city.ac.uk/~sbbb717/)
 
 Dependencies and data
 ---------------------
