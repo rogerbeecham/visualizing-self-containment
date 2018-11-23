@@ -1,15 +1,22 @@
-Code and data to support Featured Graphic submission: Characterising labour market self-containment in London with geographically arranged small multiples
-==========================================================================================================================================================
+---
+title: "README"
+author: "Roger Beecham"
+date: "November 2018"
+output: 
+  md_document:
+    variant: markdown_github
+---
+# Code and data to support Featured Graphic submission: Characterising labour market self-containment in London with geographically arranged small multiples
 
--   [Roger Beecham](http://www.roger-beecham.com) | \[@rjbeecham\](<https://twitter.com/rJBeecham>)
--   [Aidan Slingsby](http://www.staff.city.ac.uk/~sbbb717/) | \[@aidanslingsby\](<https://twitter.com/aidanslingsby>)
+* [Roger Beecham](http://www.roger-beecham.com) |  [@rjbeecham](https://twitter.com/rJBeecham)
+* [Aidan Slingsby](http://www.staff.city.ac.uk/~sbbb717/) |  [@aidanslingsby](https://twitter.com/aidanslingsby)
 
-Dependencies and data
----------------------
+
+## Dependencies and data
 
 Configure R with libraries on which featured graphic depends and helper functions.
 
-``` r
+```{r, eval=FALSE}
 # Libraries
 
 # Bundle of packages supporting Tidy data analysis. 
@@ -34,11 +41,11 @@ map_scale <- function(value, min1, max1, min2, max2) {
 
 Load and process data:
 
--   OD data by occupation at msoa level from [UK Data Service](https://www.ukdataservice.ac.uk)
--   LondonSquared layout via [After the flood](https://aftertheflood.com/projects/future-cities-catapult/)
--   Boundary data via [ONS Open Geography](http://geoportal.statistics.gov.uk/)
+* OD data by occupation at msoa level from [UK Data Service](https://www.ukdataservice.ac.uk)
+* LondonSquared layout via [After the flood](https://aftertheflood.com/projects/future-cities-catapult/)
+* Boundary data via [ONS Open Geography](http://geoportal.statistics.gov.uk/)
 
-``` r
+```{r, eval=FALSE}
 # Data
 
 # Origin-Desination data by occupation published via UK Data Service. 
@@ -116,10 +123,9 @@ data <- data %>%
   rename("d_fX"="fX", "d_fY"="fY", "d_bor"="BOR")
 ```
 
-Prep data for demand-side- and supply-side summaries
-----------------------------------------------------
+## Prep data for demand-side- and supply-side summaries
 
-``` r
+```{r, eval=FALSE}
 # Demand-side summary.
 demand_side <- data %>% 
   group_by(od_pair) %>%
@@ -169,12 +175,9 @@ supply_side <- data %>%
   rename("bor_focus"="o_bor", "fY"="o_fY", "fX"="o_fX")
 ```
 
-Explore extent of distortion in LondonSquared layout
-----------------------------------------------------
-
+## Explore extent of distortion in LondonSquared layout
 ![](./figures/grid_real.gif)
-
-``` r
+```{r, eval=FALSE}
 # Make sf object of LondonSquared layout
 grid_sf <- st_sf(geom=st_make_grid(london_boundaries, n=c(8,7), what="polygons")) %>% mutate(id=row_number())
 # Store gid cell locations and add as fields.
@@ -217,16 +220,16 @@ grid_real_sf %>%
   theme(axis.title=element_blank())
 
 animate(trans, renderer = gifski_renderer("./figures/gganim.gif"), height = 500, width=800)
-```
+```  
 
-Rank-size distributions
------------------------
+
+
+## Rank-size distributions
 
 ### Using area charts
 
-![](./figures/rank_size_area.png)
-
-``` r
+![](./figures/rank_size_area.png)  
+```{r, eval=FALSE}
 local_scale_distributions_area <- ggplot()+
   # Facet background.
   geom_rect(data=demand_side, aes(xmin=0, xmax=33, ymin=-1, ymax=1), fill="#f7f7f7", colour="#f0f0f0")+
@@ -266,9 +269,8 @@ local_scale_distributions_area <- ggplot()+
 
 ### Using bar charts
 
-![](./figures/rank_size_bar.png)
-
-``` r
+![](./figures/rank_size_bar.png)  
+```{r, eval=FALSE}
 local_scale_distributions_bars <- ggplot()+
   # Facet background.
   geom_rect(data=demand_side, aes(xmin=0, xmax=33, ymin=-1, ymax=1), fill="#f7f7f7", colour="#f0f0f0")+
@@ -306,16 +308,14 @@ local_scale_distributions_bars <- ggplot()+
     strip.text=element_blank(),
     panel.spacing=unit(-0.2, "lines"),
   )
+
 ```
 
-OD Maps
--------
+## OD Maps
 
 ### Supply-side OD Map
-
-![](./figures/supply_side_od_map.png)
-
-``` r
+![](./figures/supply_side_od_map.png)  
+```{r, eval=FALSE}
 # Spatially ordered choropleths
 # Calculate bottom corner of London.
 data_temp <- london_boundaries  %>% st_coordinates() %>% as_tibble() %>% select(X,Y) %>% rename("lon_east"="X", "lon_north"="Y") %>% summarise(max_east=max(lon_east), min_east=min(lon_east), max_north=max(lon_north), min_north=min(lon_north)) 
@@ -356,10 +356,8 @@ od_pearson_local_choropleth_supply <- ggplot()+
 ```
 
 ### Demand-side DO Map
-
-![](./figures/demand_side_do_map.png)
-
-``` r
+![](./figures/demand_side_do_map.png)  
+```{r, eval=FALSE}
 # Create df for plotting : demand-side
 plot_data_temp <- demand_side %>%
   group_by(bor_focus) %>%
@@ -386,3 +384,8 @@ od_pearson_local_choropleth_demand <- ggplot()+
     axis.title=element_blank(),
     strip.text=element_blank())
 ```
+
+
+
+
+
