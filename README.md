@@ -1,8 +1,10 @@
-Code and data to support Featured Graphic submission: Characterising labour market self-containment in London with geographically arranged small multiples
-==========================================================================================================================================================
+Code to support Featured Graphic submission: Characterising labour market self-containment in London with geographically arranged small multiples
+=================================================================================================================================================
 
 -   [Roger Beecham](http://www.roger-beecham.com)
 -   [Aidan Slingsby](http://www.staff.city.ac.uk/~sbbb717/)
+
+This repository contains code behind our Featured Graphic submission: *Characterising labour market self-containment in London with geographically arranged small multiples*. The intention was to provide a fully reproducible repository to support the submission. We are not able to do this for reasons of data access: the data on which the submission is based is restricted to registered users of [UK Data Service](https://www.ukdataservice.ac.uk). As a result this repo is non-functional and the code should be considered skeleton/indicative. However, I have previously published a repo demonstrating much of what appears below on a version of the dataset that is publicly available, again using R libraries (`ggplot2` and `sf`): [od-flowvis-ggplot2](https://github.com/rogerbeecham/od-flowvis-ggplot2). If you would like more information/help, do get in touch: \[@rJBeecham\](<https://twitter.com/rJBeecham>).
 
 Dependencies and data
 ---------------------
