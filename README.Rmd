@@ -1,21 +1,21 @@
 ---
 title: "README"
 author: "Roger Beecham"
-date: "November 2018"
+date: "February 2019"
 output: 
   md_document:
     variant: markdown_github
 ---
-# Code to support Featured Graphic submission: Characterising labour market self-containment in London with geographically arranged small multiples
+# Code to support short graphics special submission: _Characterising labour market self-containment in London with geographically arranged small multiples_
 
 * [Roger Beecham](http://www.roger-beecham.com) 
 * [Aidan Slingsby](http://www.staff.city.ac.uk/~sbbb717/) 
 
-This repository contains code behind our Featured Graphic submission: _Characterising labour market self-containment in London with geographically arranged small multiples_. The intention was to provide a fully reproducible repository to support the submission. We are not able to do this for reasons of data access: the data on which the submission is based is restricted to registered users of [UK Data Service](https://www.ukdataservice.ac.uk). As a result this repo is non-functional and the code should be considered skeleton/indicative. However, I have previously published a repo demonstrating much of what appears below on a version of the dataset that is publicly available, again using R libraries (`ggplot2` and `sf`): [od-flowvis-ggplot2](https://github.com/rogerbeecham/od-flowvis-ggplot2). If you would like more information/help, do get in touch: [rJBeecham](https://twitter.com/rJBeecham). 
+This repository contains code behind our submission: _Characterising labour market self-containment in London with geographically arranged small multiples_. The intention was to provide a fully reproducible repository to support the submission. We are not able to do this for reasons of data access: the data on which the submission is based is restricted to registered users of [UK Data Service](https://www.ukdataservice.ac.uk). As a result this repo is non-functional and the code should be considered skeleton/indicative -- but with hopefully useful 'how-to' detail additional to the paper. A previously published repo demonstrating much of what appears below on a version of the dataset that is publicly available, again using R libraries (`ggplot2` and `sf`) is here: [od-flowvis-ggplot2](https://github.com/rogerbeecham/od-flowvis-ggplot2). If you would like more information/help, do get in touch: [rJBeecham](https://twitter.com/rJBeecham). 
 
 ## Dependencies and data
 
-Configure R with libraries on which featured graphic depends and helper functions.
+Configure R with libraries on which the graphics depend.
 
 ```{r, eval=FALSE}
 # Libraries
@@ -38,52 +38,66 @@ map_scale <- function(value, min1, max1, min2, max2) {
 }
 ```
 
-Load and process data:
+The graphics are built using the following datasets: 
 
 * OD data by occupation at msoa level from [UK Data Service](https://www.ukdataservice.ac.uk)
 * LondonSquared layout via [After the flood](https://aftertheflood.com/projects/future-cities-catapult/)
 * Boundary data via [ONS Open Geography](http://geoportal.statistics.gov.uk/)
+
+A pre-prepared script for processing these data and generating summary statistics describing _supply-side_ and _demand-side_ self-containment:
 
 ```{r, eval=FALSE}
 # Load and process data.
 source("./src/load_data.R")
 ```
 
-## Explore extent of distortion in LondonSquared layout
+## Geographically-arranged small multiples
+
+Our submission aims to characterise labour market geography in London by analysing 2011 Census data describing commuting between London's 33 boroughs. We present a set of [small multiple](https://en.wikipedia.org/wiki/Small_multiple) (Tufte 1983)-type graphics whereby a separate summary chart is created for each borough and boroughs are arranged in a grid according to their approximate geographic position. The [LondonSquared](https://aftertheflood.com/projects/future-cities-catapult/) arrangement is used here, but see [Meulemans et al. (2017)](https://www.gicentre.net/small-multiples-with-gaps/) for a wider discussion, with generalisable technique for effecting arrangements that try to preserve adjacency relations and overall geometries.
+
+Below we explore distortion in these semi-spatial layouts by morphing between a _real_ and _approximate_ layout. Code for generating the morph can be viewed in this position of the repo's [READE.Rmd](README.Rmd) file.
+
 ![](./figures/grid_real.gif)
-```{r, eval=FALSE}
-# Make sf object of LondonSquared layout
+```{r, eval=FALSE, echo=FALSE}
+# Make sf object of LondonSquared layout.
 grid_sf <- st_sf(geom=st_make_grid(london_boundaries, n=c(8,7), what="polygons")) %>% mutate(id=row_number())
 # Store gid cell locations and add as fields.
 x <- rep(1:8,7)
 y <- vector(length=length(x))
 for(i in 1:7) {
-      for(j in 1:8) {
-       index=(i-1)*8+j
-       y[index] <- map_scale(i,1,7,7,1)
-      }  
-  }
-grid_sf <- grid_sf %>% add_column(x=x, y=y) %>% 
-  inner_join(london_centroids, by=c("x"="fX", "y"="fY")) %>% 
+  for(j in 1:8) {
+    index=(i-1)*8+j
+    y[index] <- map_scale(i,1,7,7,1)
+  }  
+}
+grid_sf = grid_sf %>% add_column(x=x, y=y) %>% 
+  inner_join(london_centroids %>% select(BOR, fX, fY), by=c("x"="fX", "y"="fY")) %>% 
   st_cast(to="MULTIPOLYGON") %>% 
   rename("geometry"="geom") %>%
-  arrange(panel) %>%
-  mutate(id=row_number(), type="grid") 
+  arrange(id) 
 # Calculate grid centroids for relabelling.
 grid_centroids <- grid_sf %>% st_centroid() %>% st_coordinates() %>% as_tibble() %>% rename("east"="X", "north"="Y")
 # Add to grid_sf
 grid_sf <- grid_sf %>%
-  mutate(east=grid_centroids$east, north=grid_centroids$north)
-rm(grid_centroids)  
-# Copy if london_boundaries with same fields as grid_sf for rbind().
-real_sf <- london_boundaries %>% select(lad15cd) %>%
-  left_join(london_centroids, by=c("lad15cd"="ladcd")) %>%
-    arrange(panel) %>%
-    mutate(id=row_number(), x=fX, y=fY, type="real") %>%
-    select(id,x,y,east,north,ladcd=lad15cd,ladnm,BOR,panel,type) 
+  mutate(east=grid_centroids$east, north=grid_centroids$north, type="grid")
+rm(grid_centroids)
+# Calculate real centroids for relabelling.
+real_centroids <- london_boundaries %>% st_centroid() %>% st_coordinates() %>% as_tibble() %>% rename("east"="X", "north"="Y")
+# Add to grid_sf.
+real_sf <- london_boundaries %>%
+  mutate(east=real_centroids$east, north=real_centroids$north) %>%
+  left_join(london_centroids %>% select(ladcd, fX, fY, BOR), by=c("lad15cd"="ladcd"))
+# Update so can be bound for lerp.
+t <- grid_sf %>% select(id, x, y, BOR)
+st_geometry(t) = NULL
+real_sf <- real_sf %>% 
+  left_join(t, by=c("BOR"="BOR")) %>% 
+  mutate(type="real") %>%
+  arrange(id) %>%
+  select(id, x,y,BOR, east, north, type)
 # rbind() in order to lerp between layouts.
-grid_real_sf <- rbind(grid_sf,real_sf) %>% 
-  mutate(type=fct_relevel(as_factor(type), "real","grid"))
+grid_real_sf <- rbind(grid_sf,real_sf) %>% mutate(type=fct_relevel(as_factor(type), "real","grid"))
+
 # Animate between two layouts using gganimate package.
 grid_real_sf %>%
   ggplot()+
@@ -92,18 +106,116 @@ grid_real_sf %>%
   geom_text(aes(x=east, y=north, label=BOR), size=8, colour="#252525", alpha=0.9, show.legend=FALSE, family="Avenir Book")+
   transition_states(type, 1, 2)+
   theme(axis.title=element_blank())
+```
 
-animate(trans, renderer = gifski_renderer("./figures/gganim.gif"), height = 500, width=800)
-```  
+A three letter abbreviation is used to identify boroughs. Below is a look-up table for these.
+
+```{r, eval=FALSE, echo=TRUE}
+london_centroids %>% select(authority, BOR) %>% arrange(authority) %>%  print(n=33)
+# A tibble: 33 x 2
+   authority              BOR  
+   <chr>                  <chr>
+#  1 Barking and Dagenham   BAR  
+#  2 Barnet                 BRN  
+#  3 Bexley                 BXL  
+#  4 Brent                  BRT  
+#  5 Bromley                BRM  
+#  6 Camden                 CMD  
+#  7 City of London         CTY  
+#  8 Croydon                CRD  
+#  9 Ealing                 ELG  
+# 10 Enfield                ENF  
+# 11 Greenwich              GRN  
+# 12 Hackney                HCK  
+# 13 Hammersmith and Fulham HMS  
+# 14 Haringey               HGY  
+# 15 Harrow                 HRW  
+# 16 Havering               HVG  
+# 17 Hillingdon             HDN  
+# 18 Hounslow               HNS  
+# 19 Islington              ISL  
+# 20 Kensington and Chelsea KNS  
+# 21 Kingston upon Thames   KNG  
+# 22 Lambeth                LAM  
+# 23 Lewisham               LSH  
+# 24 Merton                 MRT  
+# 25 Newham                 NWM  
+# 26 Redbridge              RDB  
+# 27 Richmond upon Thames   RCH  
+# 28 Southwark              SWR  
+# 29 Sutton                 STN  
+# 30 Tower Hamlets          TOW  
+# 31 Waltham Forest         WTH  
+# 32 Wandsworth             WNS  
+# 33 Westminster            WST   
+```
 
 
+## Labour market self-containment
 
-## Rank-size distributions
+We argue in the short paper that our graphics support analysis into the geography of self-containment in London, a concept of routine interest to economic geographers. 
 
-### Using area charts
+Self-containment is typically quantified using two intuitive indicators: _supply-side_ self-containment describes the _share of local working residents_ of an area that access jobs in that area rather than commute elsewhere for work; _demand-side_ self-containment describes the _share of local jobs_ in an area filled by local residents rather than workers commute in from surrounding areas. Behind self-containment summary statistics there is an implied distribution of Origin-Destination (OD) flows: areas with high self-containment exhibit a power-law type distribution whereby most employed residents (supply) and available jobs (demand) are satisfied internally and this tendency becomes less strong as self-containment scores decrease.
+
+Two separate derived datasets are prepared from an OD dataset of borough-borough commutes to support our analysis of self-containment (detailed in [load_data.R](/src/load_data.R)):  a _supply side_ dataset that summarises over origins (homeplaces) and a _demand side_ dataset that summarises over destinations (workplaces). This is achieved with `group_by`, grouping the full OD dataset by `origin` for the _supply-side_ summary and `destination` for the _demand_side_ summary. In this pre-processing we do things like _rank_ OD pairs into- and out of- grouped boroughs according to their frequency, calculate the maximum number of commutes into- and out of- boroughs so that local and global scalings can be explored in our graphics.   
+
+## Self-containment, by occupation, with geographically-arranged bar charts
+
+We first display self-containment scores directly via geographically-arranged bar charts. The bars differentiate between professional and non-professional occupation types using the [ONS Standard Occupational Classification Hierarchy](https://onsdigital.github.io/dp-classification-tools/standard-occupational-classification/ONS_SOC_hierarchy_view.html). 
+
+Code for generating the chart -- the `ggplot2`  specification -- can be viewed in this position of the repo's [README.Rmd](README.Rmd) file. We generate separate rectangles for each occupation type by parameterising `geom_rect()`, supplying different colour values to differentiate professional from non-professional occupations. We chose the `geom_rect()` primitive over `geom_bar()` as it allowed greater flexibility over bar placement -- necessary for when we explore overloading of views [(Javed & Elmqvist 2012)](https://ieeexplore.ieee.org/document/6183556) with rank-size area charts. We write a rescaling function (`map_scale()`) for assisting bar sizing and placement. To arrange bars geographically by borough, we supply to `facet_grid()` a set of 2d grid positions corresponding to the LondonSquared layout. 
+
+![](./figures/bars.png)  
+```{r, eval=FALSE, echo=FALSE}
+ggplot()+
+  # Facet background.
+  geom_rect(data=supply_side, aes(xmin=-1, xmax=1, ymin=-1, ymax=1), fill="#f0f0f0", colour="#d9d9d9")+
+  # Text labels for boroughs.
+  geom_text(data=supply_side, aes(x=0, y=1, label=bor_label), family="Avenir Book", alpha=0.5, hjust="centre", vjust="top", size=4)+
+  # Rectangles representing self-containment statistics.
+  # Outline.
+  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), 
+            aes(xmin=0, xmax=-map_scale(prof_supply_side_all,0,max_supply,0,1), ymin=-0.1, ymax=0.4), fill="#40004b", alpha=0.6)+
+  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), 
+            aes(xmin=0, xmax=-map_scale(prof_supply_side_all,0,max_supply,0,1), ymin=-0.1, ymax=0.4), colour="#40004b", fill="transparent", size=0.3)+
+  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), 
+            aes(xmin=0, xmax=-map_scale(non_prof_supply_side_all,0,max_supply,0,1), ymin=-0.75, ymax=-0.25), fill="#00441b", alpha=0.6)+
+  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), 
+            aes(xmin=0, xmax=-map_scale(non_prof_supply_side_all,0,max_supply,0,1), ymin=-0.75, ymax=-0.25), colour="#00441b", fill="transparent", size=0.3)+
+  
+  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), 
+            aes(xmin=0, xmax=map_scale(prof_demand_side_all,0,max_demand,0,1), ymin=-0.1, ymax=0.4), fill="#40004b", alpha=0.6)+
+  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), 
+            aes(xmin=0, xmax=map_scale(prof_demand_side_all,0,max_demand,0,1), ymin=-0.1, ymax=0.4), colour="#40004b", fill="transparent", size=0.3)+
+  # Fill.
+  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), 
+            aes(xmin=0, xmax=map_scale(non_prof_demand_side_all,0,max_demand,0,1), ymin=-0.75, ymax=-0.25), fill="#00441b", alpha=0.6)+
+  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), 
+            aes(xmin=0, xmax=map_scale(non_prof_demand_side_all,0,max_demand,0,1), ymin=-0.75, ymax=-0.25), colour="#00441b", fill="transparent", size=0.3)+
+  # Mid point line.
+  geom_line(data=demand_side, aes(x=0, y=map_scale(prof_rank,1,33,-0.85,0.6)), colour="#000000", alpha=0.9, size=0.4)+
+  facet_grid(fY~fX)+
+  guides(alpha=FALSE)+
+  theme(
+    axis.title=element_blank(), 
+    axis.text=element_blank(),
+    panel.grid=element_blank(),
+    strip.text=element_blank(),
+    panel.spacing=unit(-0.2, "lines"),
+  )
+```
+
+## Exposing underlying distributions with geographically arranged rank-size area charts 
+
+In order to characterise the diversity with which workers commute out of their home borough for work (supply-side) and jobs within a borough are filled by non-resident workers (demand-side), we tried updating our initial graphic with rank-size area charts.  
+
+Left of the vertical line, the area chart displays counts of workers resident in the reference borough filling jobs in that or the 32 neighbouring boroughs, with boroughs ordered bottom-to-top according to frequency.  The steeper the slope, the less often residents commute out of the borough for work. Self-containment ratios are also encoded directly with the left aligned bars. Right of the vertical lines are counts of jobs filled in each reference borough either by workers living in the reference borough or by workers commuting in from the 32 neighbouring boroughs. The steeper the slope, the less often are jobs filled by workers commuting into the reference borough, with _demand-side_ containment ratios further encoded by the right-aligned bars. 
+
+Again, code for generating the chart can be viewed in this position of the repo's [README.Rmd](README.Rmd) file. The general structure of the `ggplot2` specification remains unchanged from that of the geographically-arranged bar charts. However, we represent many more observations since the rank-size area charts display full OD counts of residents commuting out of each borough  (left of vertical) and non-residents commuting into each borough (right of vertical). We add the area charts using `geom_area`, supplying the the `x` parameter a `rank` position for each OD pair out of- (supply) and into- (demand) the reference borough and to the `y` position OD pair counts rescaled between 0 and 1 by reference borough.`coord_flip()`  is used to orient the bars bottom to top.
+
 
 ![](./figures/rank_size_area.png)  
-```{r, eval=FALSE}
+```{r, eval=FALSE, echo=FALSE}
 local_scale_distributions_area <- ggplot()+
   # Facet background.
   geom_rect(data=demand_side, aes(xmin=0, xmax=33, ymin=-1, ymax=1), fill="#f7f7f7", colour="#f0f0f0")+
@@ -119,14 +231,15 @@ local_scale_distributions_area <- ggplot()+
   geom_area(data=supply_side, aes(x=non_prof_rank, y=-(non_prof/non_prof_max_workers)), fill="#00441b", alpha=0.3)+
   # Text labels for boroughs.
   geom_text(data=demand_side, aes(x=33, y=0, label=bor_label), family="Avenir Book", alpha=0.5, hjust="centre", vjust="top", size=6)+
-  # Bars for direct encoding of self-containment metric.
-  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=31, xmax=33, ymin=-1, ymax=-1+0.25*(prof_supply_side/0.7)), alpha=0.7, fill="#40004b")+
+  # Rectangles representing self-containment statistics.
+  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=31, xmax=33, ymin=-1, ymax=map_scale(prof_supply_side_all,0,max_supply,-1,-0.75)), alpha=0.7, fill="#40004b")+
   geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=31, xmax=33, ymin=-1, ymax=-0.75), colour="#40004b", size=0.2, fill="transparent")+
-  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=28, xmax=30, ymin=-1, ymax=-1+0.25*(non_prof_supply_side/0.7)), alpha=0.7, fill="#00441b")+
+  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=28, xmax=30, ymin=-1, ymax=map_scale(non_prof_supply_side_all,0,max_supply,-1,-0.75)), alpha=0.7, fill="#00441b")+
   geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=28, xmax=30, ymin=-1, ymax=-0.75), colour="#00441b", size=0.2, fill="transparent")+
-  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=31, xmax=33, ymin=1, ymax=1-0.25*(prof_demand_side/0.7)), fill="#40004b", alpha=0.7)+
+
+  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=31, xmax=33, ymin=1, ymax=map_scale(prof_demand_side_all,0,max_demand,1,0.75)), fill="#40004b", alpha=0.7)+
   geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=31, xmax=33, ymin=1, ymax=0.75), colour="#40004b", size=0.2, fill="transparent")+
-  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=28, xmax=30, ymin=1, ymax=1-0.25*(non_prof_demand_side/0.7)), fill="#00441b", alpha=0.7)+
+  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=28, xmax=30, ymin=1, ymax=map_scale(non_prof_demand_side_all,0,max_demand,1,0.75)), fill="#00441b", alpha=0.7)+
   geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=28, xmax=30, ymin=1, ymax=0.75), colour="#00441b", size=0.2, fill="transparent")+
   # Centre line : demand-side to right, supply-side to left.
   geom_line(data=demand_side, aes(x=prof_rank, y=0), colour="#000000", size=0.3)+
@@ -139,59 +252,23 @@ local_scale_distributions_area <- ggplot()+
     panel.grid=element_blank(),
     strip.text=element_blank(),
     panel.spacing=unit(-0.2, "lines"),
-  ) 
-```
-
-### Using bar charts
-
-![](./figures/rank_size_bar.png)  
-```{r, eval=FALSE}
-local_scale_distributions_bars <- ggplot()+
-  # Facet background.
-  geom_rect(data=demand_side, aes(xmin=0, xmax=33, ymin=-1, ymax=1), fill="#f7f7f7", colour="#f0f0f0")+
- # Bars : prof.
-  geom_col(data=demand_side, aes(x=prof_rank, y=prof/prof_max_jobs), fill="#40004b", alpha=0.5, width=1, size=0.2)+
-  geom_col(data=supply_side, aes(x=prof_rank, y=-prof/prof_max_workers), fill="#40004b", alpha=0.5, width=1, size=0.2)+
-  # Bars for same OD : prof.
-    geom_col(data=supply_side %>% filter(bor_focus==d_bor), aes(x=prof_rank, y=-prof/prof_max_workers), fill="#40004b", alpha=0.5, width=1, size=0.2)+
-  geom_col(data=demand_side %>% filter(bor_focus==o_bor), aes(x=prof_rank, y=prof/prof_max_jobs), fill="#40004b", alpha=0.5, width=1, size=0.2)+
-  # Bars : non-prof.
-  geom_col(data=supply_side, aes(x=non_prof_rank, y=-non_prof/non_prof_max_workers), fill="#00441b", alpha=0.5, width=1, size=0.2)+
-  geom_col(data=demand_side, aes(x=non_prof_rank, y=non_prof/non_prof_max_jobs), fill="#00441b", alpha=0.5, width=1, size=0.2)+
-  # Bars for same OD
-  geom_col(data=demand_side %>% filter(bor_focus==o_bor), aes(x=non_prof_rank, y=non_prof/non_prof_max_jobs), fill="#00441b", alpha=0.5, width=1, size=0.2)+
-  geom_col(data=supply_side %>% filter(bor_focus==d_bor), aes(x=non_prof_rank, y=-non_prof/non_prof_max_workers), fill="#00441b", alpha=0.5, width=1, size=0.2)+
- # Text labels for boroughs.
-  geom_text(data=demand_side, aes(x=33, y=0, label=bor_label), family="Avenir Book", alpha=0.5, hjust="centre", vjust="top", size=6)+
-   # Bars for direct encoding of self-containment metric.
-  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=31, xmax=33, ymin=-1, ymax=-1+0.25*(prof_supply_side/0.7)), alpha=0.7, fill="#40004b")+
-  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=31, xmax=33, ymin=-1, ymax=-0.75), colour="#40004b", size=0.2, fill="transparent")+
-  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=28, xmax=30, ymin=-1, ymax=-1+0.25*(non_prof_supply_side/0.7)), alpha=0.7, fill="#00441b")+
-  geom_rect(data=supply_side %>% filter(d_bor==bor_focus), aes(xmin=28, xmax=30, ymin=-1, ymax=-0.75), colour="#00441b", size=0.2, fill="transparent")+
-  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=31, xmax=33, ymin=1, ymax=1-0.25*(prof_demand_side/0.7)), fill="#40004b", alpha=0.7)+
-  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=31, xmax=33, ymin=1, ymax=0.75), colour="#40004b", size=0.2, fill="transparent")+
-  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=28, xmax=30, ymin=1, ymax=1-0.25*(non_prof_demand_side/0.7)), fill="#00441b", alpha=0.7)+
-  geom_rect(data=demand_side %>% filter(o_bor==bor_focus), aes(xmin=28, xmax=30, ymin=1, ymax=0.75), colour="#00441b", size=0.2, fill="transparent")+
-  # Centre line : demand-side to right, supply-side to left.
-  geom_line(data=demand_side, aes(x=prof_rank, y=0), colour="#252525", size=0.1)+
-  coord_flip()+
-  facet_grid(fY~fX)+
-  guides(alpha=FALSE)+
-  theme(
-    axis.title=element_blank(), 
-    axis.text=element_blank(),
-    panel.grid=element_blank(),
-    strip.text=element_blank(),
-    panel.spacing=unit(-0.2, "lines"),
   )
-
 ```
 
-## OD Maps
+
+## Exposing underlying spatial distributions with origin-destination flow maps
+
+We explore the additional geography to these distributions using Origin-Destination flow maps (Wood et al, 2010; Slingsby et al. 2014). Here, the area-charts are replaced with choropleth maps and shaded differently according to whether the reference cells correspond to origins (homeplaces) or destinations (workplaces).
+
+![](./figures/od_grid_lines_fill_colour.png) 
+
+In the paper submission there is a reasonably involved discussion of the contingency tables signed chi-square residuals that we calculate in order compare relative frequencies of borough-borough commutes for professional and non-professional occupations. Contingency tables are generated separately for each reference borough and differently based on whether reference boroughs correspond to origins (homeplaces) or destinations (workplaces). The signed chi-square measure has advantages over alternative measures of effect size (such as risk ratios) as saliency is given to relative differences that are also large in absolute magnitude. This effect is necessary since in c.10% of the 1089 borough-borough pairs, fewer than 30 job counts are recorded; we might expect large relative differences between professional vs. non-professional occupations here, and so would register large effect size values if risk ratios were being used – these would nevertheless be comparatively small, and possibly idiosyncratic, differences in absolute terms. 
+
+Again, code for calculated can be viewed at the below position in this repo's [README.Rmd](README.Rmd). The general structure of the `ggplot2` specification is again very similar to the previous geographically-arranged bar charts -- we use `facet_grid()` for arranging the choropleths according to their geographic position. However, we now generate a separate map for summarising commutes out of- the reference boroughs (_supply-side OD map_) and into the reference boroughs (_demand-side OD maps_). The choropleths are generated with `geom_sf()`. 
 
 ### Supply-side OD Map
 ![](./figures/supply_side_od_map.png)  
-```{r, eval=FALSE}
+```{r, eval=FALSE, echo=FALSE}
 # Spatially ordered choropleths
 # Calculate bottom corner of London.
 data_temp <- london_boundaries  %>% st_coordinates() %>% as_tibble() %>% select(X,Y) %>% rename("lon_east"="X", "lon_north"="Y") %>% summarise(max_east=max(lon_east), min_east=min(lon_east), max_north=max(lon_north), min_north=min(lon_north)) 
@@ -233,7 +310,7 @@ od_pearson_local_choropleth_supply <- ggplot()+
 
 ### Demand-side DO Map
 ![](./figures/demand_side_do_map.png)  
-```{r, eval=FALSE}
+```{r, eval=FALSE, echo=FALSE}
 # Create df for plotting : demand-side
 plot_data_temp <- demand_side %>%
   group_by(bor_focus) %>%
@@ -252,7 +329,7 @@ od_pearson_local_choropleth_demand <- ggplot()+
   geom_sf(data=plot_data_focus, fill="transparent",  colour="#252525", size=0.4)+
   geom_text(data=plot_data_temp, aes(x=lon_east_min+0.5*width, y=lon_north_max+0.15*height, label=bor_label), hjust="centre", vjust="top", size=4, alpha=0.5, show.legend=FALSE, family="Avenir Book")+
   coord_sf(crs=st_crs(plot_data_temp), datum=NA)+
-  scale_fill_distiller(palette="PRGn", direction=-1, limits=c(-1,1))+
+  scale_fill_distiller(palette="PRGn", direction=-1, limits=c(-1,1), guide = "colourbar")+
   facet_grid(fY~fX, shrink=FALSE)+
   guides(fill=FALSE)+
   theme(
@@ -262,6 +339,19 @@ od_pearson_local_choropleth_demand <- ggplot()+
 ```
 
 
+## References 
+
+* Javed W. & Elmqvist N. (2012) Exploring the design space of composite visualization. In _Pacific Visualization Symposium_ (PacificVis), IEEE, pp. 1–8.
+
+* Office for National Statistics. 2016. Travel to work area analysis in Great Britain: 2016. ONS, Online.
+
+* Meulemans, W., Dykes, J., Slingsby, A., Turkay, C. & Wood, J. 2017.  Small Multiples with Gaps. _IEEE Transactions on Visualization and Computer Graphics_, 23, pp381–390.
+
+* Slingsby, A., Kelly, M. & Dykes, J. 2014. .  “Featured Graphic. OD maps for showing changes in Irish female migration between 1851 and 1911”, _Environment and Planning A_, 46, pp2795-2797.
+
+* Tufte, E. 1983. _The Visual Display of Quantitative Information_, Graphics Press Cheshire, CT.
+
+* Wood, J., Dykes, J., Slingsby, A. 2010. “Visualization of Origins, Destinations and Flows with OD Maps”, _The Cartographic Journal_, 47 (2) pp117-129. 
 
 
 
