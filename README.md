@@ -1,4 +1,5 @@
 Code to support short graphics special submission: *Characterising labour market self-containment in London with geographically arranged small multiples*
+[![DOI](https://zenodo.org/badge/158826255.svg)](https://zenodo.org/badge/latestdoi/158826255)
 =========================================================================================================================================================
 
 -   [Roger Beecham](http://www.roger-beecham.com)
