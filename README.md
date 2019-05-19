@@ -1,4 +1,4 @@
-Code to support hybrid graphics submission to [EPA](https://journals.sagepub.com/home/epn): *Characterising labour market self-containment in London with geographically arranged small multiples* [![DOI](https://zenodo.org/badge/158826255.svg)](https://zenodo.org/badge/latestdoi/158826255)
+Code to support hybrid graphics paper in [EPA](https://journals.sagepub.com/home/epn): *Characterising labour market self-containment in London with geographically arranged small multiples* [![DOI](https://zenodo.org/badge/158826255.svg)](https://zenodo.org/badge/latestdoi/158826255)
 =========================================================================================================================================================
 
 -   [Roger Beecham](http://www.roger-beecham.com)
