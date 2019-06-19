@@ -6,6 +6,8 @@ Code to support hybrid graphics paper in [EPA](https://journals.sagepub.com/home
 
 This repository contains code behind our paper: [*Characterising labour market self-containment in London with geographically arranged small multiples*](https://journals.sagepub.com/doi/10.1177/0308518X19850580). The intention was to provide a fully reproducible repository to support the paper. We are not able to do this for reasons of data access: the data on which the paper is based is restricted to registered users of [UK Data Service](https://www.ukdataservice.ac.uk). As a result this repo is non-functional and the code should be considered skeleton/indicative -- but with hopefully useful 'how-to' detail additional to the paper. A previously published repo demonstrating much of what appears below on a version of the dataset that is publicly available, again using R libraries (`ggplot2` and `sf`) is here: [od-flowvis-ggplot2](https://github.com/rogerbeecham/od-flowvis-ggplot2). If you would like more information/help, do get in touch: [rJBeecham](https://twitter.com/rJBeecham).
 
+Update: also see [this twitter thread](https://twitter.com/rJBeecham/status/1138746147269468161) with a condensed version of the paper (but a few additional graphics).
+
 Dependencies and data
 ---------------------
 
