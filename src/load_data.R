@@ -26,7 +26,7 @@ all_demand <- read_csv("/Users/roger/-/git/visualizing-self-containment/data/mso
          non_prof_jobs=all_jobs-prof_jobs) %>% 
   select(lad_code, all_jobs, prof_jobs, non_prof_jobs)
   
-all_supply <- read_csv("/Users/roger/-/git/visualizing-self-containment/data/msoa_origins_occupation.csv") %>%
+all_supply <- read_csv("./data/msoa_origins_occupation.csv") %>%
   inner_join(temp_lookup, by=c("origin_msoa"="msoa_code")) %>% 
   group_by(lad_code) %>%
   summarise_at(vars(`1_managers_senior`:`9_elementary`), funs(sum(.))) %>%
